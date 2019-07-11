@@ -1,0 +1,47 @@
+'''
+Title: ArcGIS Pro: Apply symbology to new layers
+Author: Craig Vande Ligt
+Date Created: July 11, 2019
+
+Please acknowledge the author when using these scripts in publication(s), projects, or assignments
+
+Background: I needed to copy data from multiple folders into a single new folder that an ArcGIS Pro 
+      project would be connected to. To do this I manually copied the data layers for a given Map into 
+      the new folder, added them to the given Map, and then manually applied the symbology of the 
+      original data to the new data. Doing this for over 70 projects, each containing multiple Maps
+      can take a long time. To speed it up, I decided to write a multi-part script. 
+      
+Prupose: To rename the original data layers (so as not to confuse the apply symbology function), and
+      following manually adding in the new data layers, match the original and new data layers and 
+      apply the original data layers symbology to the new data layers. Following this the original 
+      data layers can be removed from the project.
+
+NOTE: Only use Part I of the script first, then manually add new data layers to Map, 
+      then use Part II of script to apply symbology changes to new data layers
+''' 
+
+### PART I ###
+import arcpy
+
+project = arcpy.mp.ArcGISProject('current')
+
+MapX = project.listMaps('<name or partial name '*' of Map>')[0]                         #Obtains Map and assigns to MapX
+Layers = MapX.listLayers()                                                              #List current data layers in MapX 
+for l in Layers:
+    l.name = l.name + '__OG'                                                            #Rename TOC layer names to include '__OG' at the end of original names
+
+
+### PART II ###
+Layers_ALL = MapX.listLayers()                                                          #Obtains new list of data layers in MapX (post-addition of new layers for new file locations)
+Layers_New = []
+for l in Layers_ALL:
+    if arcpy.Describe(l).path == '<string filepath location of new data layers>':       #Per data layer, if data layer filepath is the same as the new filepath's location:
+        Layers_New += MapX.listLayers(l)                                                #    add the data layer to the new layer list 'Layers_New'
+for l in Layers_New: 
+    print(l.name)
+
+for l in Layers_New:
+    for f in Layers:
+        if l.name == f.name[:-4]:                                                       #If the new data layer has the same name as the original data layer:
+            print(l.name, ' == ', f.name)
+            arcpy.ApplySymbologyFromLayer_management(l,f)                               #    apply the symbology from the original layer to the new layer
